@@ -162,3 +162,156 @@ type A5 = { hello: string };
 // 넓은 타입에 좁은 타입을 대입하는데 왜 안되냐. 객체 리터럴을 바로 대입하면 잉여 속성 검사에서 에러
 const b5 = { hello: 'world', why: 'error' };
 const c5: A5 = b5; // 변수로 빼주면 에러 사라짐
+
+/* void 타입은 return값을 사용하지 안 겠다는 뜻(메서드나 매개변수에서는 리턴값 사용 가능, but 조심해야 함) */
+function fa(callback: () => void): void { // 리턴값이 없다는 의미
+}
+fa(() => {
+    return '3'; // 리턴값이 뭐든 간에 사용하지 않겠다
+});
+
+interface Human2 {
+    talk: () => void
+}
+
+const human2: Human2 = {
+    talk() { return 'abc'; } // 리턴값이 뭐든 간에 사용하지 않겠다
+}
+
+declare function forEach<T>(arr: T[], callback: (el: T) => void): void;
+// declare function forEach<T>(arr: T[], callback: (el: T) => void): void;
+let target: number[] = [];
+forEach([1, 2, 3], el => target.push(el)); // 리턴값이 number임. void는 리턴값이 있어도 허용
+
+interface A6 {
+    talk: () => void;
+}
+const a6: A6 = {
+    talk() { return 3; }
+}
+
+/* 타입만 선언하고 싶을 때 declare(구현은 다른 파일에 있어야 함) */
+declare const a7: string;
+declare function fa7(x: number): number;
+declare class A7 {}
+// 추후 declare module, declare global, declare namespace도 배움
+
+/* unknown과 any */
+// any 쓸 바에는 unknown 씀. 지금 당장 타입을 정확하게 모르겠을 때. any는 ts를 쓰기를 포기한 것임
+try {
+
+} catch (error) { // error의 타입은 unknown
+    (error as Error).message
+}
+
+/* 타입 좁히기(타입 가드) */
+// 유니온 타입의 인자를 처리할 때 정확히 어떤 타입인지 검사해야 할 경우
+function numOrStr(a: number | string) {
+    // (a as number).toFixed(1); // unknown일 때는 as 쓰지 마라
+    if (typeof a === 'number') {
+        a.toFixed(1);
+    } else { // string
+        a.charAt(3);
+    }
+}
+
+function numOrNumArray(a: number | number[]) {
+    if (Array.isArray(a)) { // number[]
+        a.concat(4);
+    } else { // number
+        a.toFixed(3);
+    }
+}
+
+class A8 {
+    a8() {}
+}
+class B8 {
+    b8() {}
+}
+function aOrB(param: A8 | B8) {
+    if (param instanceof A8) {
+        param.a8();
+    }
+}
+aOrB(new A8()); // 인스턴스를 넣어주어야 함
+aOrB(new B8());
+// 원시값일 때는 typeof, 배열일 때는 Array.isArray(), 클래스일 때는 instanceof 씀
+
+type B9 = { type: 'b', bbb: string };
+type C9 = { type: 'c', ccc: string };
+type D9 = { type: 'd', ddd: string };
+type A9 = B9 | C9 | D9;
+function typeCheck(a: A9) {
+  if (a.type === 'b') { // 보통 값으로 더 많이 구분함. 객체들 간 구분할 때 type 속성 달아두는 거 추천
+    a.bbb; // a: B9
+  } else if (a.type === 'c') {
+    a.ccc; // a: C9
+  } else {
+    a.ddd; // a: D9
+  }
+
+  if ('bbb' in a) { // in 연산자를 이용해서 속성명으로 구분할 수도 있음
+    a.type;
+  } else if ('ccc' in a) {
+    a.type;
+  } else {
+    a.type;
+  }
+}
+// ts가 if문에 대해 타입 추론을 정확하게 해줌
+
+/* 커스텀 타입 가드(is, 형식 조건자) */
+// typeof, Array.isArray(), instanceof 말고도, 타입을 구분해주는 커스텀 함수를 직접 만들 수 있음
+interface Cat { meow: number }
+interface Dog { bow: number }
+function catOrDog(a: Cat | Dog): a is Dog { // 리턴값에 is가 있으면 커스텀 타입 가드로 구분
+  // 타입 판별 직접 만들기
+  if ((a as Cat).meow) { return false }
+  return true;
+}
+
+function pet(a: Cat | Dog) {
+  if (catOrDog(a)) { // 커스텀 함수 사용
+      console.log(a.bow);
+  }
+  if ('meow' in a) {
+      console.log(a.meow);
+  }
+}
+
+const isRejected = (input: PromiseSettledResult<unknown>): input is PromiseRejectedResult => input.status === 'rejected';
+const isFulfilled = <T>(input: PromiseSettledResult<T>): input is PromiseFulfilledResult<T> => input.status === 'fulfilled';
+
+// Promise -> Pending -> Settled(Fulfilled, Rejected)
+// Promise를 비동기로 실행하는 도중에는 Pending 상태였다가 완료되면 Settled 상태로 변함. 성공했으면 Fulfilled, 실패했으면 Rejected
+// promises.then().catch()에서 전체는 Settled, then() 부분은 Fulfilled, catch() 부분은 Rejected
+
+const promises = await Promise.allSettled([Promise.resolve('a'), Promise.resolve('b')]); // 성공했는지 실패했는지 모름
+const errors = promises.filter(isRejected); // ts가 Rejected라고 추론하도록 함
+export {};
+
+/* {}와 Object */
+const x: {} = 'hello';
+const y: Object = 'hi'; // {}와 Object는 모든 타입을 가리킴(null과 undefined는 제외)
+// const xx: object = 'hi'; // Type 'string' is not assignable to type 'object'.
+const yy: object = { hello: 'world!' }; // object 지양해라. interface, type, class 써라
+const z: unknown = 'hi';
+// unknown도 any처럼 모든 타입, null, undefined를 다 받을 수 있음. any보다는 unknown 권장
+// unknown = {} | null | undefined
+if (z) {
+    z; // z: {}
+} else {
+    z; // z: unknown
+}
+
+/* readonly, 인덱스드 시그니처, 맵드 타입스 */
+interface A10 {
+    readonly a: string;
+    b: string;
+}
+
+type A11 = { [key: string]: number } // 속성이 너무 많은데 전부 다 문자열이었음 좋겠어. 인덱스드 시그니처
+
+type B12 = 'Human' | 'Mammal' | 'Animal';
+type A12 = { [key in B12]: B12 }; // 속성이 Human, Mammal, Animal 중 하나였으면 좋겠어. 맵드 타입스
