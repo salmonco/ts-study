@@ -315,3 +315,95 @@ type A11 = { [key: string]: number } // 속성이 너무 많은데 전부 다 �
 
 type B12 = 'Human' | 'Mammal' | 'Animal';
 type A12 = { [key in B12]: B12 }; // 속성이 Human, Mammal, Animal 중 하나였으면 좋겠어. 맵드 타입스
+
+/* class에 private, protected 추가됨 */
+class A13 {
+    private a: string; // ts의 private. 이걸 더 추천
+    #b: number; // js의 private
+    constructor(a: string, b: number = 456) {
+        this.a = a;
+        this.#b = b;
+    }
+
+    method() {
+        console.log(this.a, this.#b);
+    }
+}
+const a13 = new A13('123');
+
+interface A14 { // 추상
+    readonly a: string;
+    b: string;
+}
+
+class B14 implements A14 { // 구현
+    private _a: string; // private은 class B14 안에서만 쓸 수 있음
+    protected _b: string; // 안에서는 쓸 수 있는데 밖에서는 못 씀
+    c: string = 'wow'; // 아무것도 안 쓰면 public. 안과 밖 둘다에서 쓸 수 있음
+    constructor() {
+        this._a = '123';
+        this._b = 'world';
+    }
+
+    get a() { return this._a; }
+    set a(value) { this._a = value; }
+
+    get b() { return this._b; }
+    set b(value) { this._b = value; }
+
+    method() {
+        console.log(this._a);
+        console.log(this._b);
+        console.log(this.c);
+    }
+}
+class C14 extends B14 {
+    method() {
+        // console.log(this._a); // 에러
+        console.log(this._b);
+        console.log(this.c);
+    }
+}
+// new C14()._a; // 에러
+// new C14()._b; // 에러
+new C14().c;
+
+//             public   protected   private
+// 클래스 내부      O          O          O
+// 인스턴스         O          X          X
+// 상속 클래스      O          O          X    
+
+// js로 변환하면 private, protected 전부 다 사라짐
+// class를 쓰냐 interface를 쓰냐. js로 변환하고도 남아있는 class를 쓰는 걸 추천
+
+/* 옵셔널, 제네릭 기본 */
+function abc(a: number, b?: number, c?: number) {}
+abc(1)
+abc(1, 2)
+abc(1, 2, 3)
+
+let obj3: { a: string, b?: string } = { a: 'hello', b: 'world' }
+obj3 = { a: 'hello' };
+// "?"는 있어도 되고 없어도 된다는 의미
+
+function add4<T extends number | string>(x: T, y: T) {
+    // return x + y // 에러. ts는 T가 뭔지 정확하게 모르기 때문
+}
+add4<number>(1, 2);
+add4(1, 2);
+add4<string>('1', '2');
+add4('1', '2');
+// add4(1, '2'); // 에러
+// 같은 타입을 같은 문자인 T로 표현
+// 제네릭은 선언할 때 말고 실제 사용할 때 타입이 정해짐
+
+// extends로 타입을 제한할 수 있음
+// <T extends {...}> // 특정 객체
+// <T extends any[]> // 모든 배열
+// <T extends (...args: any) => any> // 모든 함수
+// <T extends abstract new (...args: any) => any> // 생성자 타입
+// <T extends keyof any> // string | number | symbol
+// 제한을 걸 때는 any 써도 됨
+
+const arrowFunc = <T = unknown>() => {};
+// ts에서 JSX의 <>를 헷갈려하면 extends나 기본값 설정해서 제네릭 타입이란 걸 알려줄 수 있음
